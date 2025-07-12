@@ -82,6 +82,10 @@ if "show_register" not in st.session_state:
     st.session_state.show_register = False
 if "show_spinning_animation" not in st.session_state:
     st.session_state.show_spinning_animation = False
+if "show_welcome_message" not in st.session_state:
+    st.session_state.show_welcome_message = False
+if "welcome_message_time" not in st.session_state:
+    st.session_state.welcome_message_time = 0
 
 def generate_user_id():
     #Создает уникальный ID для пользователя
@@ -266,9 +270,10 @@ def registr():
             else:
                 user_id = generate_user_id()
                 save_user_to_file(user_id, input_user_name, input_password, 1000.0)
-                st.toast(f"Пользователь {input_user_name} успешно зарегистрирован!", icon="✅")
+                # Устанавливаем время показа сообщения
                 st.session_state.show_register = False
-                time.sleep(3)                                      
+                st.session_state.show_welcome_message = True
+                st.session_state.welcome_message_time = time.time() + 2
                 st.rerun()
                 
             
@@ -343,8 +348,9 @@ def login():
             user["last_login"] = True
             save_user_to_file(user["id"], user["login"], user["password"], user["balance"], True)
     
-            st.toast(f'Добро пожаловать, {input_user_name}!', icon="✅")
-            time.sleep(1)
+            # Устанавливаем время показа сообщения
+            st.session_state.show_welcome_message = True
+            st.session_state.welcome_message_time = time.time() + 2
             st.rerun()
         else:
             st.toast("Неверные данные пользователя!", icon="❌")
@@ -398,11 +404,23 @@ for filename in os.listdir("."):
 
 # Показываем соответствующую страницу
 if active_user:
+    # Показываем приветственное сообщение если нужно
+    if st.session_state.show_welcome_message and time.time() < st.session_state.welcome_message_time:
+        st.toast(f'Добро пожаловать, {active_user["login"]}!', icon="✅")
+    elif st.session_state.show_welcome_message and time.time() >= st.session_state.welcome_message_time:
+        st.session_state.show_welcome_message = False
+    
     main_game()
 else:
     if st.session_state.show_register:
         registr()
     else:
+        # Показываем сообщение о регистрации если нужно
+        if st.session_state.show_welcome_message and time.time() < st.session_state.welcome_message_time:
+            st.toast("Пользователь успешно зарегистрирован!", icon="✅")
+        elif st.session_state.show_welcome_message and time.time() >= st.session_state.welcome_message_time:
+            st.session_state.show_welcome_message = False
+        
         login()
 
         
