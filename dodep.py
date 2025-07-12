@@ -191,6 +191,9 @@ def main_game():
 
 
 def registr():
+    
+    global data
+    
     # Заголовок с горизонтальной спиралью
     st.markdown("""
     <div style="display: flex; align-items: center; justify-content: center;">
@@ -219,6 +222,7 @@ def registr():
         else:
             with open('data.json', 'r', encoding='utf-8') as file:
                 data = json.load(file)
+            
             if data["users"]:
                 copy_user = any(user["login"] == input_user_name for user in data["users"])
                 if copy_user:
@@ -233,9 +237,8 @@ def registr():
                     with open("data.json", "w", encoding="utf-8") as f:
                         json.dump(data, f, ensure_ascii=False, indent=2)
                     st.toast(f"Пользователь {input_user_name} успешно зарегистрирован!", icon="✅")
-                    print(st.session_state.show_register)
-                    time.sleep(3)
                     st.session_state.show_register = False
+                    time.sleep(3)                                      
                     st.rerun()
                     
             else:
@@ -247,10 +250,9 @@ def registr():
                     })  
                 with open("data.json", "w", encoding="utf-8") as f:
                     json.dump(data, f, ensure_ascii=False, indent=2)
-                st.toast(f"Пользователь {input_user_name} успешно зарегистрирован!", icon="✅")
-                print(st.session_state.show_register)
-                time.sleep(3)
-                st.session_state.show_register = False
+                st.toast(f"Пользователь {input_user_name} успешно зарегистрирован!", icon="✅")  
+                st.session_state.show_register = False             
+                time.sleep(3)                            
                 st.rerun()
                 
             
