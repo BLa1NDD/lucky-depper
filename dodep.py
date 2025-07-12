@@ -120,21 +120,23 @@ def main_game():
     # Дополнительные настройки
     st.sidebar.subheader("Статистика")
     st.sidebar.write("🎯 Вероятности выигрыша:")
-    st.sidebar.write("• 1 = 40%")
-    st.sidebar.write("• 5 = 20%") 
-    st.sidebar.write("• 10 = 10%")
-    st.sidebar.write("• К = 5%")
-    st.sidebar.write("• К5 = 1%")
+    st.sidebar.write("• 1 - 1.5x = 40%")
+    st.sidebar.write("• 5 - 2x = 20%") 
+    st.sidebar.write("• 10 - 2.5x = 10%")
+    st.sidebar.write("• К - 3x = 5%")
+    st.sidebar.write("• З - 5x = 1%")
 
-    user_dep = st.text_input("Ваша ставка ", help="Здесь нужно ввести число или число с буквой К")
+    options = ["1", "5", "10", "К", "З"]
+
+    user_dep = st.selectbox("Ваша ставка ", options)
     num_dep = st.number_input("Размер депа ", step=0.1)
 
     now = time.time()
 
     if st.session_state.show_toast_until > now:
         st.toast(st.session_state.last_toast_message, icon=st.session_state.last_toast_icon)
-        st.success("Надо что-то депнуть скорее!")
-        st.stop()
+        st.toast("Надо что-то депнуть скорее!", icon="💰")
+        
 
 
 
@@ -142,7 +144,7 @@ def main_game():
         if num_dep > data["users"][user_index]["balance"]:
             st.toast("У тебя нет денег на ДЕП ", icon="❌")
         else:
-            if st.button("Сохранить ставку и ДЕПНУТЬ"):
+            if st.button("ДЕПНУТЬ"):
                 # Показываем анимацию вращения
                 st.session_state.show_spinning_animation = True
                 st.rerun()
@@ -206,9 +208,7 @@ def registr():
     input_user_name = st.text_input("👤 login", placeholder="Введите login", max_chars=18)
     input_password = st.text_input("🔒 password", type="password", placeholder="Введите password", max_chars=30)
     input_password_confirm = st.text_input("🔒 password confirm", type="password", placeholder="Подтвердите пароль", max_chars=30)
-    if not st.button("Зарегистрироваться"):
-        st.stop()
-    else:
+    if st.button("Зарегистрироваться"):  
         if not input_user_name or not input_password:
             st.toast("Заполните все поля!", icon="❌")
         elif input_password != input_password_confirm:
@@ -217,22 +217,48 @@ def registr():
             st.toast("Логин и пароль должны не менее 3 символов!", icon="❌")
         
         else:
-            copy_user = any(user["login"] == input_user_name for user in data["users"])
-            if copy_user:
-                st.toast("Такой пользователь уже существует!", icon="❌")  
+            with open('data.json', 'r', encoding='utf-8') as file:
+                data = json.load(file)
+            if data["users"]:
+                copy_user = any(user["login"] == input_user_name for user in data["users"])
+                if copy_user:
+                    st.toast("Такой пользователь уже существует!", icon="❌")  
+                else:
+                    data["users"].append({
+                        "login": input_user_name,
+                        "password": input_password,
+                        "balance": 1000.0,
+                        "last_login": False
+                    })  
+                    with open("data.json", "w", encoding="utf-8") as f:
+                        json.dump(data, f, ensure_ascii=False, indent=2)
+                    st.toast(f"Пользователь {input_user_name} успешно зарегистрирован!", icon="✅")
+                    print(st.session_state.show_register)
+                    time.sleep(3)
+                    st.session_state.show_register = False
+                    st.rerun()
+                    
             else:
                 data["users"].append({
-                    "login": input_user_name,
-                    "password": input_password,
-                    "balance": 1000.0,
-                    "last_login": False
-                })  
+                        "login": input_user_name,
+                        "password": input_password,
+                        "balance": 1000.0,
+                        "last_login": False
+                    })  
                 with open("data.json", "w", encoding="utf-8") as f:
                     json.dump(data, f, ensure_ascii=False, indent=2)
                 st.toast(f"Пользователь {input_user_name} успешно зарегистрирован!", icon="✅")
+                print(st.session_state.show_register)
                 time.sleep(3)
+                st.session_state.show_register = False
                 st.rerun()
+                
+            
+
+
+
     if st.button("🔄 Назад"):
+        st.session_state.show_register = False
         st.rerun()
 
 
@@ -380,7 +406,7 @@ stavka = {
     "5": [2, 20],
     "10": [2.5, 10],
     "К": [3, 5],
-    "К5": [5, 1]
+    "З": [5, 1]
 }
 
 
