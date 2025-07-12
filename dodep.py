@@ -72,8 +72,6 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # Инициализация сессии только если её нет
-
-
 if "show_toast_until" not in st.session_state:
     st.session_state.show_toast_until = 0
 if "last_toast_message" not in st.session_state:
@@ -89,14 +87,14 @@ def generate_user_id():
     #Создает уникальный ID для пользователя
     return str(uuid.uuid4())
 
-def save_user_to_file(user_id, login, password, balance=1000.0):
+def save_user_to_file(user_id, login, password, balance=1000.0, last_login=False):
     """Сохраняет пользователя в отдельный файл"""
     user_data = {
         "id": user_id,
         "login": login,
         "password": password,
         "balance": balance,
-        "last_login": False
+        "last_login": last_login
     }
     filename = f"user_{user_id}.json"
     with open(filename, "w", encoding="utf-8") as f:
@@ -123,8 +121,25 @@ def find_user_by_login(login):
                 continue
     return None
 
-def main_game(current_user):
+def main_game():
     global stavka
+    
+    # Получаем текущего пользователя из файлов
+    current_user = None
+    for filename in os.listdir("."):
+        if filename.startswith("user_") and filename.endswith(".json"):
+            try:
+                with open(filename, "r", encoding="utf-8") as f:
+                    user_data = json.load(f)
+                    if user_data.get("last_login", False):
+                        current_user = user_data
+                        break
+            except:
+                continue
+    
+    if not current_user:
+        st.error("Пользователь не найден!")
+        st.rerun()
     
     st.title("🎰 Lucky Depper")
 
@@ -139,12 +154,7 @@ def main_game(current_user):
     # Кнопка выхода из аккаунта
     if st.sidebar.button("🚪 Выйти из аккаунта"):
         current_user["last_login"] = False
-        save_user_to_file(current_user["id"], current_user["login"], current_user["password"], current_user["balance"])
-        # Очищаем session_state
-        if hasattr(st.session_state, 'user_logged_in'):
-            del st.session_state.user_logged_in
-        if hasattr(st.session_state, 'logged_in_user'):
-            del st.session_state.logged_in_user
+        save_user_to_file(current_user["id"], current_user["login"], current_user["password"], current_user["balance"], False)
         st.rerun()
 
     # Разделитель
@@ -198,17 +208,18 @@ def main_game(current_user):
             
             # Выполняем логику игры
             dep_ran = random.randint(1 + random.randint(5, 30), 95)
+            print(dep_ran)
             user_dep_chance = stavka[user_dep][1]
             if dep_ran + user_dep_chance >= 100:
                 current_user["balance"] += num_dep * (stavka[user_dep][0]) 
                 st.session_state.last_toast_message = f"Поздравляем! Ваш баланс: {current_user['balance']} деп коинов"
                 st.session_state.last_toast_icon = "✅"
-                save_user_to_file(current_user["id"], current_user["login"], current_user["password"], current_user["balance"])
+                save_user_to_file(current_user["id"], current_user["login"], current_user["password"], current_user["balance"], current_user["last_login"])
             else:
                 current_user["balance"] -= num_dep
                 st.session_state.last_toast_message = f"Делай ДОДЕП ты проиграл :( Ваш баланс: {current_user['balance']} деп коинов"
                 st.session_state.last_toast_icon = "❌"
-                save_user_to_file(current_user["id"], current_user["login"], current_user["password"], current_user["balance"])
+                save_user_to_file(current_user["id"], current_user["login"], current_user["password"], current_user["balance"], current_user["last_login"])
             
             st.session_state.show_toast_until = time.time() + 2
             st.session_state.show_spinning_animation = False
@@ -220,6 +231,8 @@ def main_game(current_user):
 
 
 def registr():
+    
+    global data
     
     # Заголовок с горизонтальной спиралью
     st.markdown("""
@@ -255,7 +268,7 @@ def registr():
                 save_user_to_file(user_id, input_user_name, input_password, 1000.0)
                 st.toast(f"Пользователь {input_user_name} успешно зарегистрирован!", icon="✅")
                 st.session_state.show_register = False
-                time.sleep(1)
+                time.sleep(3)                                      
                 st.rerun()
                 
             
@@ -326,9 +339,9 @@ def login():
         user = find_user_by_login(input_user_name)
 
         if user and user["password"] == input_password:
-            # Обновляем статус входа
+        # Обновляем статус входа
             user["last_login"] = True
-            save_user_to_file(user["id"], user["login"], user["password"], user["balance"])
+            save_user_to_file(user["id"], user["login"], user["password"], user["balance"], True)
     
             st.toast(f'Добро пожаловать, {input_user_name}!', icon="✅")
             time.sleep(1)
@@ -370,22 +383,22 @@ stavka = {
 
 # Проверяем, есть ли активный пользователь
 active_user = None
-
-# Ищем активного пользователя в файлах
 for filename in os.listdir("."):
     if filename.startswith("user_") and filename.endswith(".json"):
+        print(filename)
         try:
             with open(filename, "r", encoding="utf-8") as f:
                 user_data = json.load(f)
                 if user_data.get("last_login", False):
                     active_user = user_data
+                    
                     break
         except:
             continue
 
 # Показываем соответствующую страницу
 if active_user:
-    main_game(active_user)
+    main_game()
 else:
     if st.session_state.show_register:
         registr()
