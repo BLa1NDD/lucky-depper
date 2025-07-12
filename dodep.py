@@ -281,6 +281,9 @@ def registr():
                 st.session_state.show_register = False
                 st.session_state.show_welcome_message = True
                 st.session_state.welcome_message_time = time.time() + 2
+                
+                # Добавляем небольшую задержку для гарантии сохранения файла
+                time.sleep(0.1)
                 st.rerun()
                 
             
@@ -361,6 +364,9 @@ def login():
             # Устанавливаем время показа сообщения
             st.session_state.show_welcome_message = True
             st.session_state.welcome_message_time = time.time() + 2
+            
+            # Добавляем небольшую задержку для гарантии сохранения файла
+            time.sleep(0.1)
             st.rerun()
         else:
             st.toast("Неверные данные пользователя!", icon="❌")
@@ -383,8 +389,7 @@ def login():
         if st.button("📝 Зарегистрироваться", key="register_btn", help="Создать новый аккаунт"):
             st.session_state.show_register = True
             st.rerun()
-        else:
-            st.stop()
+        
     
     
 
@@ -405,12 +410,17 @@ for filename in os.listdir("."):
     if filename.startswith("user_") and filename.endswith(".json"):
         try:
             with open(filename, "r", encoding="utf-8") as f:
-                user_data = json.load(f)
-                if user_data.get("last_login", False) == True:
+                user_data = json.load(f)              
+                if user_data.get("last_login", False):
                     active_user = user_data
                     break
-        except:
-            st.title("error 😔")
+        except Exception as e:
+            print(f"Ошибка чтения файла {filename}: {e}")
+            # Если файл поврежден, удаляем его
+            try:
+                os.remove(filename)
+            except:
+                pass
             continue
 
 # Показываем соответствующую страницу
