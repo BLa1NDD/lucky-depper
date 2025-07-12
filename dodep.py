@@ -259,6 +259,7 @@ def registr():
                 save_user_to_file(user_id, input_user_name, input_password, 1000.0)
                 st.toast(f"Пользователь {input_user_name} успешно зарегистрирован!", icon="✅")
                 st.session_state.show_register = False
+                time.sleep(1)
                 st.rerun()
                 
             
@@ -338,6 +339,7 @@ def login():
             st.session_state.user_logged_in = True
     
             st.toast(f'Добро пожаловать, {input_user_name}!', icon="✅")
+            time.sleep(1)
             st.rerun()
         else:
             st.toast("Неверные данные пользователя!", icon="❌")
@@ -400,6 +402,7 @@ if not active_user:
 # Показываем соответствующую страницу
 if active_user and not st.session_state.get('show_register', False):
     main_game(active_user)
+    st.stop()
 else:
     if st.session_state.show_register:
         registr()
