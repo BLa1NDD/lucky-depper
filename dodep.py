@@ -84,6 +84,10 @@ if "show_register" not in st.session_state:
     st.session_state.show_register = False
 if "show_spinning_animation" not in st.session_state:
     st.session_state.show_spinning_animation = False
+if "user_logged_in" not in st.session_state:
+    st.session_state.user_logged_in = False
+if "logged_in_user" not in st.session_state:
+    st.session_state.logged_in_user = None
 
 def generate_user_id():
     #Создает уникальный ID для пользователя
@@ -255,7 +259,6 @@ def registr():
                 save_user_to_file(user_id, input_user_name, input_password, 1000.0)
                 st.toast(f"Пользователь {input_user_name} успешно зарегистрирован!", icon="✅")
                 st.session_state.show_register = False
-                time.sleep(3)                                      
                 st.rerun()
                 
             
@@ -335,7 +338,6 @@ def login():
             st.session_state.user_logged_in = True
     
             st.toast(f'Добро пожаловать, {input_user_name}!', icon="✅")
-            time.sleep(1)
             st.rerun()
         else:
             st.toast("Неверные данные пользователя!", icon="❌")
