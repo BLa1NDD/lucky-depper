@@ -123,25 +123,8 @@ def find_user_by_login(login):
                 continue
     return None
 
-def main_game():
+def main_game(current_user):
     global stavka
-    
-    # Получаем текущего пользователя из сессии
-    current_user = None
-    for filename in os.listdir("."):
-        if filename.startswith("user_") and filename.endswith(".json"):
-            try:
-                with open(filename, "r", encoding="utf-8") as f:
-                    user_data = json.load(f)
-                    if user_data.get("last_login", False):
-                        current_user = user_data
-                        break
-            except:
-                continue
-    
-    if not current_user:
-        st.error("Пользователь не найден!")
-        st.rerun()
     
     st.title("🎰 Lucky Depper")
 
@@ -157,6 +140,11 @@ def main_game():
     if st.sidebar.button("🚪 Выйти из аккаунта"):
         current_user["last_login"] = False
         save_user_to_file(current_user["id"], current_user["login"], current_user["password"], current_user["balance"])
+        # Очищаем session_state
+        if hasattr(st.session_state, 'user_logged_in'):
+            del st.session_state.user_logged_in
+        if hasattr(st.session_state, 'logged_in_user'):
+            del st.session_state.logged_in_user
         st.rerun()
 
     # Разделитель
@@ -210,7 +198,6 @@ def main_game():
             
             # Выполняем логику игры
             dep_ran = random.randint(1 + random.randint(5, 30), 95)
-            print(dep_ran)
             user_dep_chance = stavka[user_dep][1]
             if dep_ran + user_dep_chance >= 100:
                 current_user["balance"] += num_dep * (stavka[user_dep][0]) 
@@ -337,16 +324,15 @@ def login():
     if st.button("Войти"):     
         # Ищем пользователя по логину
         user = find_user_by_login(input_user_name)
-        
-        # Отладочная информация
-        st.write(f"Debug: Найден пользователь: {user is not None}")
-        if user:
-            st.write(f"Debug: Пароль совпадает: {user['password'] == input_password}")
 
         if user and user["password"] == input_password:
             # Обновляем статус входа
             user["last_login"] = True
             save_user_to_file(user["id"], user["login"], user["password"], user["balance"])
+            
+            # Сохраняем информацию о входе в session_state
+            st.session_state.logged_in_user = user
+            st.session_state.user_logged_in = True
     
             st.toast(f'Добро пожаловать, {input_user_name}!', icon="✅")
             time.sleep(1)
@@ -388,22 +374,40 @@ stavka = {
 
 # Проверяем, есть ли активный пользователь
 active_user = None
-for filename in os.listdir("."):
-    if filename.startswith("user_") and filename.endswith(".json"):
-        try:
-            with open(filename, "r", encoding="utf-8") as f:
-                user_data = json.load(f)
-                if user_data.get("last_login", False):
-                    active_user = user_data
-                    break
-        except:
-            continue
+
+# Сначала проверяем session_state
+if hasattr(st.session_state, 'user_logged_in') and st.session_state.user_logged_in:
+    active_user = st.session_state.logged_in_user
+
+# Если нет в session_state, ищем в файлах
+if not active_user:
+    for filename in os.listdir("."):
+        if filename.startswith("user_") and filename.endswith(".json"):
+            try:
+                with open(filename, "r", encoding="utf-8") as f:
+                    user_data = json.load(f)
+                    if user_data.get("last_login", False):
+                        active_user = user_data
+                        # Обновляем session_state
+                        st.session_state.logged_in_user = user_data
+                        st.session_state.user_logged_in = True
+                        break
+            except Exception as e:
+                continue
 
 # Показываем соответствующую страницу
 if active_user:
-    main_game()
+    main_game(active_user)
 else:
     if st.session_state.show_register:
         registr()
     else:
         login()
+
+        
+    
+
+
+
+
+
