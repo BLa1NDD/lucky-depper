@@ -338,7 +338,8 @@ def login():
             st.session_state.user_logged_in = True
     
             st.toast(f'Добро пожаловать, {input_user_name}!', icon="✅")
-            st.rerun()
+            # Показываем игру сразу
+            main_game(user)
         else:
             st.toast("Неверные данные пользователя!", icon="❌")
     
@@ -398,7 +399,7 @@ if not active_user:
                 continue
 
 # Показываем соответствующую страницу
-if active_user:
+if active_user and not st.session_state.get('show_register', False):
     main_game(active_user)
 else:
     if st.session_state.show_register:
