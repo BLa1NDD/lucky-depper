@@ -337,9 +337,14 @@ def login():
     if st.button("Войти"):     
         # Ищем пользователя по логину
         user = find_user_by_login(input_user_name)
+        
+        # Отладочная информация
+        st.write(f"Debug: Найден пользователь: {user is not None}")
+        if user:
+            st.write(f"Debug: Пароль совпадает: {user['password'] == input_password}")
 
         if user and user["password"] == input_password:
-        # Обновляем статус входа
+            # Обновляем статус входа
             user["last_login"] = True
             save_user_to_file(user["id"], user["login"], user["password"], user["balance"])
     
@@ -402,11 +407,3 @@ else:
         registr()
     else:
         login()
-
-        
-    
-
-
-
-
-
