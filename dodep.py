@@ -423,11 +423,11 @@ if active_user:
         st.session_state.show_welcome_message = False
     
     main_game()
-    st.write("active_user", active_user)
+    print("active_user", active_user)
 else:
     # Очищаем предыдущий контент
     st.empty()
-    st.write("active_user", active_user)
+    print("active_user", active_user)
     if st.session_state.show_register:
         registr()
     else:
