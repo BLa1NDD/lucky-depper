@@ -1,4 +1,4 @@
-import streamlit as st, json, time, random, os
+import streamlit as st, json, time, random, os, uuid
 
 
 
@@ -85,11 +85,64 @@ if "show_register" not in st.session_state:
 if "show_spinning_animation" not in st.session_state:
     st.session_state.show_spinning_animation = False
 
+def generate_user_id():
+    #Создает уникальный ID для пользователя
+    return str(uuid.uuid4())
 
+def save_user_to_file(user_id, login, password, balance=1000.0):
+    """Сохраняет пользователя в отдельный файл"""
+    user_data = {
+        "id": user_id,
+        "login": login,
+        "password": password,
+        "balance": balance,
+        "last_login": False
+    }
+    filename = f"user_{user_id}.json"
+    with open(filename, "w", encoding="utf-8") as f:
+        json.dump(user_data, f, ensure_ascii=False, indent=2)
 
+def load_user_from_file(user_id):
+    """Загружает пользователя из файла по ID"""
+    filename = f"user_{user_id}.json"
+    if os.path.exists(filename):
+        with open(filename, "r", encoding="utf-8") as f:
+            return json.load(f)
+    return None
+
+def find_user_by_login(login):
+    """Ищет пользователя по логину среди всех файлов"""
+    for filename in os.listdir("."):
+        if filename.startswith("user_") and filename.endswith(".json"):
+            try:
+                with open(filename, "r", encoding="utf-8") as f:
+                    user_data = json.load(f)
+                    if user_data.get("login") == login:
+                        return user_data
+            except:
+                continue
+    return None
 
 def main_game():
-    global data, user_index, stavka
+    global stavka
+    
+    # Получаем текущего пользователя из сессии
+    current_user = None
+    for filename in os.listdir("."):
+        if filename.startswith("user_") and filename.endswith(".json"):
+            try:
+                with open(filename, "r", encoding="utf-8") as f:
+                    user_data = json.load(f)
+                    if user_data.get("last_login", False):
+                        current_user = user_data
+                        break
+            except:
+                continue
+    
+    if not current_user:
+        st.error("Пользователь не найден!")
+        st.rerun()
+    
     st.title("🎰 Lucky Depper")
 
     # Создаем сайдбар
@@ -97,21 +150,13 @@ def main_game():
     st.sidebar.header("Профиль")
 
     # Информация о пользователе
-    if user_index is not None and data["users"][user_index].get("last_login", False) == True:
-        st.sidebar.write(f"👤 Пользователь: {data['users'][user_index]['login']}")
-        st.sidebar.write(f"💰 Баланс: {float(data['users'][user_index]['balance'])}")
+    st.sidebar.write(f"👤 Пользователь: {current_user['login']}")
+    st.sidebar.write(f"💰 Баланс: {float(current_user['balance'])}")
 
     # Кнопка выхода из аккаунта
-    if st.sidebar.button("🚪 Выйти из аккаунта", type="primary"):
-        if user_index is not None and data["users"][user_index].get("last_login", False) == True:
-            for user in data["users"]:
-                if user["login"] == data["users"][user_index]["login"]:
-                    user["last_login"] = False
-                    break
-            
-            with open("data.json", "w", encoding="utf-8") as f:
-                json.dump(data, f, ensure_ascii=False, indent=2)
-        
+    if st.sidebar.button("🚪 Выйти из аккаунта"):
+        current_user["last_login"] = False
+        save_user_to_file(current_user["id"], current_user["login"], current_user["password"], current_user["balance"])
         st.rerun()
 
     # Разделитель
@@ -140,50 +185,47 @@ def main_game():
 
 
 
-    if user_index is not None:
-        if num_dep > data["users"][user_index]["balance"]:
-            st.toast("У тебя нет денег на ДЕП ", icon="❌")
-        else:
-            if st.button("ДЕПНУТЬ"):
-                # Показываем анимацию вращения
-                st.session_state.show_spinning_animation = True
-                st.rerun()
+    if num_dep > current_user["balance"]:
+        st.toast("У тебя нет денег на ДЕП ", icon="❌")
+    else:
+        if st.button("ДЕПНУТЬ"):
+            # Показываем анимацию вращения
+            st.session_state.show_spinning_animation = True
+            st.rerun()
+        
+        # Показываем вращающееся колесо после нажатия кнопки
+        if st.session_state.show_spinning_animation:
+            # Генерируем случайное время вращения от 3 до 6 секунд
+            spin_time = random.uniform(3, 6)
             
-            # Показываем вращающееся колесо после нажатия кнопки
-            if st.session_state.show_spinning_animation:
-                # Генерируем случайное время вращения от 3 до 6 секунд
-                spin_time = random.uniform(3, 6)
-                
-                st.markdown(f"""
-                <div style="text-align: center; margin-top: 10px;">
-                    <div class="spinning-wheel" style="animation: spin {spin_time}s linear infinite;"></div>
-                    <p style="color: #666; margin-top: 15px; font-size: 16px;">🎰 Крутим колесо удачи...</p>
-                </div>
-                """, unsafe_allow_html=True)
-                
-                # Имитируем обработку - используем то же случайное время
-                time.sleep(spin_time)
-                
-                # Выполняем логику игры
-                dep_ran = random.randint(1 + random.randint(5, 30), 95)
-                print(dep_ran)
-                user_dep_chance = stavka[user_dep][1]
-                if dep_ran + user_dep_chance >= 100:
-                    data["users"][user_index]["balance"] += num_dep * (stavka[user_dep][0]) 
-                    st.session_state.last_toast_message = f"Поздравляем! Ваш баланс: {data['users'][user_index]['balance']} деп коинов"
-                    st.session_state.last_toast_icon = "✅"
-                    with open("data.json", "w", encoding="utf-8") as f:
-                        json.dump(data, f, ensure_ascii=False, indent=2)
-                else:
-                    data["users"][user_index]["balance"] -= num_dep
-                    st.session_state.last_toast_message = f"Делай ДОДЕП ты проиграл :( Ваш баланс: {data['users'][user_index]['balance']} деп коинов"
-                    st.session_state.last_toast_icon = "❌"
-                    with open("data.json", "w", encoding="utf-8") as f:
-                        json.dump(data, f, ensure_ascii=False, indent=2)
-                
-                st.session_state.show_toast_until = time.time() + 2
-                st.session_state.show_spinning_animation = False
-                st.rerun()
+            st.markdown(f"""
+            <div style="text-align: center; margin-top: 10px;">
+                <div class="spinning-wheel" style="animation: spin {spin_time}s linear infinite;"></div>
+                <p style="color: #666; margin-top: 15px; font-size: 16px;">🎰 Крутим колесо удачи...</p>
+            </div>
+            """, unsafe_allow_html=True)
+            
+            # Имитируем обработку - используем то же случайное время
+            time.sleep(spin_time)
+            
+            # Выполняем логику игры
+            dep_ran = random.randint(1 + random.randint(5, 30), 95)
+            print(dep_ran)
+            user_dep_chance = stavka[user_dep][1]
+            if dep_ran + user_dep_chance >= 100:
+                current_user["balance"] += num_dep * (stavka[user_dep][0]) 
+                st.session_state.last_toast_message = f"Поздравляем! Ваш баланс: {current_user['balance']} деп коинов"
+                st.session_state.last_toast_icon = "✅"
+                save_user_to_file(current_user["id"], current_user["login"], current_user["password"], current_user["balance"])
+            else:
+                current_user["balance"] -= num_dep
+                st.session_state.last_toast_message = f"Делай ДОДЕП ты проиграл :( Ваш баланс: {current_user['balance']} деп коинов"
+                st.session_state.last_toast_icon = "❌"
+                save_user_to_file(current_user["id"], current_user["login"], current_user["password"], current_user["balance"])
+            
+            st.session_state.show_toast_until = time.time() + 2
+            st.session_state.show_spinning_animation = False
+            st.rerun()
 
 
 
@@ -191,8 +233,6 @@ def main_game():
 
 
 def registr():
-    
-    global data
     
     # Заголовок с горизонтальной спиралью
     st.markdown("""
@@ -211,8 +251,6 @@ def registr():
     input_user_name = st.text_input("👤 login", placeholder="Введите login", max_chars=18)
     input_password = st.text_input("🔒 password", type="password", placeholder="Введите password", max_chars=30)
     input_password_confirm = st.text_input("🔒 password confirm", type="password", placeholder="Подтвердите пароль", max_chars=30)
-    with open('data.json', 'r', encoding='utf-8') as file:
-        data = json.load(file)
     if st.button("Зарегистрироваться"):  
         if not input_user_name or not input_password:
             st.toast("Заполните все поля!", icon="❌")
@@ -221,37 +259,16 @@ def registr():
         elif len(input_user_name) < 3 or len(input_password) < 3:
             st.toast("Логин и пароль должны не менее 3 символов!", icon="❌")
         
-        else:           
-            if data["users"]:
-                copy_user = any(user["login"] == input_user_name for user in data["users"])
-                if copy_user:
-                    st.toast("Такой пользователь уже существует!", icon="❌")  
-                else:
-                    data["users"].append({
-                        "login": input_user_name,
-                        "password": input_password,
-                        "balance": 1000.0,
-                        "last_login": False
-                    })  
-                    with open("data.json", "w", encoding="utf-8") as f:
-                        json.dump(data, f, ensure_ascii=False, indent=2)
-                    st.toast(f"Пользователь {input_user_name} успешно зарегистрирован!", icon="✅")
-                    st.session_state.show_register = False
-                    time.sleep(3)                                      
-                    st.rerun()
-                    
+        else:
+            existing_user = find_user_by_login(input_user_name)
+            if existing_user:
+                st.toast("Такой пользователь уже существует!", icon="❌")  
             else:
-                data["users"].append({
-                        "login": input_user_name,
-                        "password": input_password,
-                        "balance": 1000.0,
-                        "last_login": False
-                    })  
-                with open("data.json", "w", encoding="utf-8") as f:
-                    json.dump(data, f, ensure_ascii=False, indent=2)
-                st.toast(f"Пользователь {input_user_name} успешно зарегистрирован!", icon="✅")  
-                st.session_state.show_register = False             
-                time.sleep(3)                            
+                user_id = generate_user_id()
+                save_user_to_file(user_id, input_user_name, input_password, 1000.0)
+                st.toast(f"Пользователь {input_user_name} успешно зарегистрирован!", icon="✅")
+                st.session_state.show_register = False
+                time.sleep(3)                                      
                 st.rerun()
                 
             
@@ -318,24 +335,19 @@ def login():
     input_user_name = st.text_input("👤 login", placeholder="Введите логин", max_chars=18)
     input_password = st.text_input("🔒 password", type="password", placeholder="Введите пароль", max_chars=30)
     if st.button("Войти"):     
-        # Проверяем всех пользователей
-        user_found = False
-        for user in data["users"]:
-            if user["login"] == input_user_name and user["password"] == input_password:
-                user["last_login"] = True        
-                with open("data.json", "w", encoding="utf-8") as f:
-                    json.dump(data, f, ensure_ascii=False, indent=2)
-                st.toast(f'Добро пожаловать, {input_user_name}!', icon="✅")
-                user_found = True
-                time.sleep(1)
-                st.rerun()
-                 
-                
-        
-        # Показываем ошибку только если пользователь не найден
-        if not user_found:
-            st.toast("Неверные данные пользователя!  Возможно стоит перезагрузить страницу или кликнуть по одной из строк ввода данных!", icon="❌")
+        # Ищем пользователя по логину
+        user = find_user_by_login(input_user_name)
 
+        if user and user["password"] == input_password:
+        # Обновляем статус входа
+            user["last_login"] = True
+            save_user_to_file(user["id"], user["login"], user["password"], user["balance"])
+    
+            st.toast(f'Добро пожаловать, {input_user_name}!', icon="✅")
+            time.sleep(1)
+            st.rerun()
+        else:
+            st.toast("Неверные данные пользователя!", icon="❌")
     
     st.markdown("---")
     
@@ -361,47 +373,6 @@ def login():
 
 
 
-data = {
-    "users": [        
-    ] 
-}
-
-
-if not os.path.exists("data.json"):
-    with open("data.json", "w", encoding="utf-8") as f:
-        json.dump(data, f, ensure_ascii=False, indent=2)
-
-
-
-with open("data.json", "r", encoding="utf-8") as f:
-       data = json.load(f)
-
-
-
-
-
-
-
-if "users" not in data:
-    st.error("Файл data.json повреждён или не содержит пользователей!")
-    st.stop()
-
-
-for user in data["users"]:
-    if "last_login" not in user:
-        user["last_login"] = False
-    if "balance" not in user:
-        user["balance"] = 0.0
-
-
-
-user_index = None
-
-for i, user in enumerate(data["users"]):
-    if user.get("last_login", False) == True:
-        user_index = i
-        break
-
 stavka = {
     "1": [1.5, 40],#лист из 1: x , 2: процент
     "5": [2, 20],
@@ -410,19 +381,27 @@ stavka = {
     "З": [5, 1]
 }
 
+# Проверяем, есть ли активный пользователь
+active_user = None
+for filename in os.listdir("."):
+    if filename.startswith("user_") and filename.endswith(".json"):
+        try:
+            with open(filename, "r", encoding="utf-8") as f:
+                user_data = json.load(f)
+                if user_data.get("last_login", False):
+                    active_user = user_data
+                    break
+        except:
+            continue
 
-
-
-
-
-
-if user_index == None or data["users"][user_index].get("last_login", False) == False:
-    if  st.session_state.show_register:
-        registr()
-    elif user_index == None or data["users"][user_index].get("last_login", False) == False:
-        login()
-else:
+# Показываем соответствующую страницу
+if active_user:
     main_game()
+else:
+    if st.session_state.show_register:
+        registr()
+    else:
+        login()
 
         
     
