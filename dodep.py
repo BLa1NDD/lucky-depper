@@ -338,8 +338,7 @@ def login():
             st.session_state.user_logged_in = True
     
             st.toast(f'Добро пожаловать, {input_user_name}!', icon="✅")
-            # Показываем игру сразу
-            main_game(user)
+            st.rerun()
         else:
             st.toast("Неверные данные пользователя!", icon="❌")
     
