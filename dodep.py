@@ -211,6 +211,8 @@ def registr():
     input_user_name = st.text_input("👤 login", placeholder="Введите login", max_chars=18)
     input_password = st.text_input("🔒 password", type="password", placeholder="Введите password", max_chars=30)
     input_password_confirm = st.text_input("🔒 password confirm", type="password", placeholder="Подтвердите пароль", max_chars=30)
+    with open('data.json', 'r', encoding='utf-8') as file:
+        data = json.load(file)
     if st.button("Зарегистрироваться"):  
         if not input_user_name or not input_password:
             st.toast("Заполните все поля!", icon="❌")
@@ -219,10 +221,7 @@ def registr():
         elif len(input_user_name) < 3 or len(input_password) < 3:
             st.toast("Логин и пароль должны не менее 3 символов!", icon="❌")
         
-        else:
-            with open('data.json', 'r', encoding='utf-8') as file:
-                data = json.load(file)
-            
+        else:           
             if data["users"]:
                 copy_user = any(user["login"] == input_user_name for user in data["users"])
                 if copy_user:
