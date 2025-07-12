@@ -128,6 +128,9 @@ def find_user_by_login(login):
 def main_game():
     global stavka
     
+    # Очищаем контейнер для предотвращения смешивания с формой логина
+    st.empty()
+    
     # Получаем текущего пользователя из файлов
     current_user = None
     for filename in os.listdir("."):
@@ -238,6 +241,9 @@ def registr():
     
     global data
     
+    # Очищаем контейнер для предотвращения смешивания с игрой
+    st.empty()
+    
     # Заголовок с горизонтальной спиралью
     st.markdown("""
     <div style="display: flex; align-items: center; justify-content: center;">
@@ -290,6 +296,9 @@ def registr():
 
 
 def login():
+    
+    # Очищаем контейнер для предотвращения смешивания с игрой
+    st.empty()
     
     st.markdown("""
     <style>
@@ -344,7 +353,7 @@ def login():
         user = find_user_by_login(input_user_name)
 
         if user and user["password"] == input_password:
-        # Обновляем статус входа
+            # Обновляем статус входа
             user["last_login"] = True
             save_user_to_file(user["id"], user["login"], user["password"], user["balance"], True)
     
@@ -404,6 +413,9 @@ for filename in os.listdir("."):
 
 # Показываем соответствующую страницу
 if active_user:
+    # Очищаем предыдущий контент
+    st.empty()
+    
     # Показываем приветственное сообщение если нужно
     if st.session_state.show_welcome_message and time.time() < st.session_state.welcome_message_time:
         st.toast(f'Добро пожаловать, {active_user["login"]}!', icon="✅")
@@ -412,6 +424,9 @@ if active_user:
     
     main_game()
 else:
+    # Очищаем предыдущий контент
+    st.empty()
+    
     if st.session_state.show_register:
         registr()
     else:
