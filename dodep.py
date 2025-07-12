@@ -84,10 +84,6 @@ if "show_register" not in st.session_state:
     st.session_state.show_register = False
 if "show_spinning_animation" not in st.session_state:
     st.session_state.show_spinning_animation = False
-if "user_logged_in" not in st.session_state:
-    st.session_state.user_logged_in = False
-if "logged_in_user" not in st.session_state:
-    st.session_state.logged_in_user = None
 
 def generate_user_id():
     #Создает уникальный ID для пользователя
@@ -129,9 +125,6 @@ def find_user_by_login(login):
 
 def main_game(current_user):
     global stavka
-    
-    # Очищаем контейнер для надежного скрытия формы логина
-    st.empty()
     
     st.title("🎰 Lucky Depper")
 
@@ -336,10 +329,6 @@ def login():
             # Обновляем статус входа
             user["last_login"] = True
             save_user_to_file(user["id"], user["login"], user["password"], user["balance"])
-            
-            # Сохраняем информацию о входе в session_state
-            st.session_state.logged_in_user = user
-            st.session_state.user_logged_in = True
     
             st.toast(f'Добро пожаловать, {input_user_name}!', icon="✅")
             time.sleep(1)
@@ -382,32 +371,21 @@ stavka = {
 # Проверяем, есть ли активный пользователь
 active_user = None
 
-# Сначала проверяем session_state
-if hasattr(st.session_state, 'user_logged_in') and st.session_state.user_logged_in:
-    active_user = st.session_state.logged_in_user
-
-# Если нет в session_state, ищем в файлах
-if not active_user:
-    for filename in os.listdir("."):
-        if filename.startswith("user_") and filename.endswith(".json"):
-            try:
-                with open(filename, "r", encoding="utf-8") as f:
-                    user_data = json.load(f)
-                    if user_data.get("last_login", False):
-                        active_user = user_data
-                        # Обновляем session_state
-                        st.session_state.logged_in_user = user_data
-                        st.session_state.user_logged_in = True
-                        break
-            except Exception as e:
-                continue
+# Ищем активного пользователя в файлах
+for filename in os.listdir("."):
+    if filename.startswith("user_") and filename.endswith(".json"):
+        try:
+            with open(filename, "r", encoding="utf-8") as f:
+                user_data = json.load(f)
+                if user_data.get("last_login", False):
+                    active_user = user_data
+                    break
+        except:
+            continue
 
 # Показываем соответствующую страницу
-if active_user and not st.session_state.get('show_register', False):
-    # Очищаем любые остатки формы логина
-    st.empty()
+if active_user:
     main_game(active_user)
-    st.stop()
 else:
     if st.session_state.show_register:
         registr()
