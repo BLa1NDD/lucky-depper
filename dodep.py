@@ -215,7 +215,6 @@ def main_game():
             
             # Выполняем логику игры
             dep_ran = random.randint(1 + random.randint(5, 30), 95)
-            print(dep_ran)
             user_dep_chance = stavka[user_dep][1]
             if dep_ran + user_dep_chance >= 100:
                 current_user["balance"] += num_dep * (stavka[user_dep][0]) 
@@ -400,34 +399,32 @@ stavka = {
 active_user = None
 for filename in os.listdir("."):
     if filename.startswith("user_") and filename.endswith(".json"):
-        print(filename)
         try:
             with open(filename, "r", encoding="utf-8") as f:
                 user_data = json.load(f)
-                if user_data.get("last_login", False):
+                if user_data.get("last_login", False) == True:
                     active_user = user_data
                     
                     break
         except:
+            st.title("error")
             continue
 
 # Показываем соответствующую страницу
 if active_user:
-    # Очищаем предыдущий контент
-    st.empty()
     
     # Показываем приветственное сообщение если нужно
     if st.session_state.show_welcome_message and time.time() < st.session_state.welcome_message_time:
         st.toast(f'Добро пожаловать, {active_user["login"]}!', icon="✅")
     elif st.session_state.show_welcome_message and time.time() >= st.session_state.welcome_message_time:
         st.session_state.show_welcome_message = False
-    
+    st.empty()
     main_game()
-    print("active_user", active_user)
+    
 else:
     # Очищаем предыдущий контент
     st.empty()
-    print("active_user", active_user)
+    
     if st.session_state.show_register:
         registr()
     else:
