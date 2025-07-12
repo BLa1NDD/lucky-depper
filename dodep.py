@@ -86,6 +86,8 @@ if "show_welcome_message" not in st.session_state:
     st.session_state.show_welcome_message = False
 if "welcome_message_time" not in st.session_state:
     st.session_state.welcome_message_time = 0
+if "active_user" not in st.session_state:
+    st.session_state.active_user = None
 
 def generate_user_id():
     #Создает уникальный ID для пользователя
@@ -381,6 +383,8 @@ def login():
         if st.button("📝 Зарегистрироваться", key="register_btn", help="Создать новый аккаунт"):
             st.session_state.show_register = True
             st.rerun()
+        else:
+            st.stop()
     
     
 
@@ -404,15 +408,13 @@ for filename in os.listdir("."):
                 user_data = json.load(f)
                 if user_data.get("last_login", False) == True:
                     active_user = user_data
-                    
                     break
         except:
-            st.title("error")
+            st.title("error 😔")
             continue
 
 # Показываем соответствующую страницу
-if active_user:
-    
+if active_user:  
     # Показываем приветственное сообщение если нужно
     if st.session_state.show_welcome_message and time.time() < st.session_state.welcome_message_time:
         st.toast(f'Добро пожаловать, {active_user["login"]}!', icon="✅")
