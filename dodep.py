@@ -130,6 +130,9 @@ def find_user_by_login(login):
 def main_game(current_user):
     global stavka
     
+    # Очищаем контейнер для надежного скрытия формы логина
+    st.empty()
+    
     st.title("🎰 Lucky Depper")
 
     # Создаем сайдбар
@@ -401,6 +404,8 @@ if not active_user:
 
 # Показываем соответствующую страницу
 if active_user and not st.session_state.get('show_register', False):
+    # Очищаем любые остатки формы логина
+    st.empty()
     main_game(active_user)
     st.stop()
 else:
