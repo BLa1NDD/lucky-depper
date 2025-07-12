@@ -86,8 +86,7 @@ if "show_welcome_message" not in st.session_state:
     st.session_state.show_welcome_message = False
 if "welcome_message_time" not in st.session_state:
     st.session_state.welcome_message_time = 0
-if "active_user" not in st.session_state:
-    st.session_state.active_user = None
+
 
 def generate_user_id():
     #Создает уникальный ID для пользователя
@@ -240,8 +239,6 @@ def main_game():
 
 def registr():
     
-    global data
-    
     # Очищаем контейнер для предотвращения смешивания с игрой
     st.empty()
     
@@ -276,7 +273,7 @@ def registr():
                 st.toast("Такой пользователь уже существует!", icon="❌")  
             else:
                 user_id = generate_user_id()
-                save_user_to_file(user_id, input_user_name, input_password, 1000.0)
+                save_user_to_file(user_id, input_user_name, input_password, 1000.0, False)
                 # Устанавливаем время показа сообщения
                 st.session_state.show_register = False
                 st.session_state.show_welcome_message = True
@@ -285,9 +282,6 @@ def registr():
                 # Добавляем небольшую задержку для гарантии сохранения файла
                 time.sleep(0.1)
                 st.rerun()
-                
-            
-
 
 
     if st.button("🔄 Назад"):
