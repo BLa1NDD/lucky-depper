@@ -71,25 +71,26 @@ st.markdown("""
 
 # Инициализация сессии только если её нет
 if "session_id" not in st.session_state:
-    # Пытаемся найти активную сессию в файлах пользователей
-    active_session = None
+    # Пытаемся восстановить состояние из файлов пользователей
+    restored_session = None
     
+    # Ищем файлы состояния пользователей
     for filename in os.listdir("."):
-        if filename.startswith("user_") and filename.endswith(".json"):
+        if filename.startswith("user_state_") and filename.endswith(".json"):
             try:
                 with open(filename, "r", encoding="utf-8") as f:
-                    user_data = json.load(f)
-                    if user_data.get("session_id") is not None:
-                        active_session = user_data.get("session_id")
+                    state_data = json.load(f)
+                    if state_data.get("is_logged_in", False):
+                        restored_session = state_data.get("session_id")
                         break
             except:
                 continue
     
-    if active_session:
-        st.session_state.session_id = active_session
+    if restored_session:
+        st.session_state.session_id = restored_session
     else:
-        # Генерируем уникальный session_id с временной меткой
-        st.session_state.session_id = f"{str(uuid.uuid4())}_{int(time.time())}"
+        # Генерируем уникальный session_id с временной меткой и случайным числом
+        st.session_state.session_id = f"{str(uuid.uuid4())}_{int(time.time())}_{random.randint(1000, 9999)}"
 
 # Инициализация остальных переменных сессии
 if "show_toast_until" not in st.session_state:
@@ -146,6 +147,29 @@ def find_user_by_login(login):
                 continue
     return None
 
+def save_user_state(user_id, is_logged_in=False):
+    """Сохраняет состояние пользователя (вход/выход)"""
+    state_file = f"user_state_{user_id}.json"
+    state_data = {
+        "user_id": user_id,
+        "is_logged_in": is_logged_in,
+        "session_id": st.session_state.session_id if is_logged_in else None,
+        "timestamp": int(time.time())
+    }
+    with open(state_file, "w", encoding="utf-8") as f:
+        json.dump(state_data, f, ensure_ascii=False, indent=2)
+
+def load_user_state(user_id):
+    """Загружает состояние пользователя"""
+    state_file = f"user_state_{user_id}.json"
+    if os.path.exists(state_file):
+        try:
+            with open(state_file, "r", encoding="utf-8") as f:
+                return json.load(f)
+        except:
+            pass
+    return None
+
 def main_game():
     global stavka
     
@@ -183,6 +207,10 @@ def main_game():
     if st.sidebar.button("🚪 Выйти из аккаунта"):
         current_user["session_id"] = None
         save_user_to_file(current_user["id"], current_user["login"], current_user["password"], current_user["balance"], None)
+        
+        # Сохраняем состояние пользователя (выход)
+        save_user_state(current_user["id"], False)
+        
         st.rerun()
 
     # Разделитель
@@ -293,6 +321,10 @@ def registr():
             else:
                 user_id = generate_user_id()
                 save_user_to_file(user_id, input_user_name, input_password, 1000.0, None)
+                
+                # Сохраняем состояние пользователя (не в системе)
+                save_user_state(user_id, False)
+                
                 # Устанавливаем время показа сообщения
                 st.session_state.show_register = False
                 st.session_state.show_welcome_message = True
@@ -373,6 +405,9 @@ def login():
             # Обновляем статус входа с уникальным session_id
             user["session_id"] = st.session_state.session_id
             save_user_to_file(user["id"], user["login"], user["password"], user["balance"], st.session_state.session_id)
+            
+            # Сохраняем состояние пользователя
+            save_user_state(user["id"], True)
     
             # Устанавливаем время показа сообщения
             st.session_state.show_welcome_message = True
@@ -423,10 +458,13 @@ for filename in os.listdir("."):
     if filename.startswith("user_") and filename.endswith(".json"):
         try:
             with open(filename, "r", encoding="utf-8") as f:
-                user_data = json.load(f)              
+                user_data = json.load(f)
                 if user_data.get("session_id") == st.session_state.session_id:
-                    active_user = user_data
-                    break
+                    # Проверяем состояние пользователя
+                    user_state = load_user_state(user_data["id"])
+                    if user_state and user_state.get("is_logged_in", False):
+                        active_user = user_data
+                        break
         except Exception as e:
             print(f"Ошибка чтения файла {filename}: {e}")
             # Если файл поврежден, удаляем его
