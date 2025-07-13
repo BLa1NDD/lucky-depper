@@ -1,30 +1,5 @@
 import streamlit as st, json, time, random, os, uuid
 
-# Генерируем уникальный ID сессии для каждого пользователя
-if "session_id" not in st.session_state:
-    # Пытаемся получить session_id из файла
-    session_file = "current_session.txt"
-    if os.path.exists(session_file):
-        try:
-            with open(session_file, "r") as f:
-                session_id = f.read().strip()
-                if session_id:
-                    st.session_state.session_id = session_id
-                else:
-                    st.session_state.session_id = str(uuid.uuid4())
-        except:
-            st.session_state.session_id = str(uuid.uuid4())
-    else:
-        st.session_state.session_id = str(uuid.uuid4())
-    
-    # Сохраняем session_id в файл
-    try:
-        with open(session_file, "w") as f:
-            f.write(st.session_state.session_id)
-    except:
-        pass
-
-
 st.set_page_config(
     page_title="Lucky Depper",
     page_icon="🎰",
@@ -95,6 +70,28 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # Инициализация сессии только если её нет
+if "session_id" not in st.session_state:
+    # Пытаемся найти активную сессию в файлах пользователей
+    active_session = None
+    
+    for filename in os.listdir("."):
+        if filename.startswith("user_") and filename.endswith(".json"):
+            try:
+                with open(filename, "r", encoding="utf-8") as f:
+                    user_data = json.load(f)
+                    if user_data.get("session_id") is not None:
+                        active_session = user_data.get("session_id")
+                        break
+            except:
+                continue
+    
+    if active_session:
+        st.session_state.session_id = active_session
+    else:
+        # Генерируем уникальный session_id с временной меткой
+        st.session_state.session_id = f"{str(uuid.uuid4())}_{int(time.time())}"
+
+# Инициализация остальных переменных сессии
 if "show_toast_until" not in st.session_state:
     st.session_state.show_toast_until = 0
 if "last_toast_message" not in st.session_state:
@@ -186,15 +183,6 @@ def main_game():
     if st.sidebar.button("🚪 Выйти из аккаунта"):
         current_user["session_id"] = None
         save_user_to_file(current_user["id"], current_user["login"], current_user["password"], current_user["balance"], None)
-        
-        # Очищаем файл сессии
-        session_file = "current_session.txt"
-        if os.path.exists(session_file):
-            try:
-                os.remove(session_file)
-            except:
-                pass
-        
         st.rerun()
 
     # Разделитель
