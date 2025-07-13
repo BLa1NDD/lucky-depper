@@ -275,7 +275,7 @@ def registr():
                 st.toast("Такой пользователь уже существует!", icon="❌")  
             else:
                 user_id = generate_user_id()
-                save_user_to_file(user_id, input_user_name, input_password, 1000.0, st.session_state.session_id)
+                save_user_to_file(user_id, input_user_name, input_password, 1000.0, None)
                 # Устанавливаем время показа сообщения
                 st.session_state.show_register = False
                 st.session_state.show_welcome_message = True
