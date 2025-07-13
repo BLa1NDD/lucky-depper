@@ -107,6 +107,8 @@ if "show_welcome_message" not in st.session_state:
     st.session_state.show_welcome_message = False
 if "welcome_message_time" not in st.session_state:
     st.session_state.welcome_message_time = 0
+if "is_registration_message" not in st.session_state:
+    st.session_state.is_registration_message = False
 
 
 def generate_user_id():
@@ -328,6 +330,7 @@ def registr():
                 # Устанавливаем время показа сообщения
                 st.session_state.show_register = False
                 st.session_state.show_welcome_message = True
+                st.session_state.is_registration_message = True
                 st.session_state.welcome_message_time = time.time() + 2
                 
                 # Добавляем небольшую задержку для гарантии сохранения файла
@@ -411,6 +414,7 @@ def login():
     
             # Устанавливаем время показа сообщения
             st.session_state.show_welcome_message = True
+            st.session_state.is_registration_message = False
             st.session_state.welcome_message_time = time.time() + 2
             
             # Добавляем небольшую задержку для гарантии сохранения файла
@@ -481,6 +485,7 @@ if active_user:
         st.toast(f'Добро пожаловать, {active_user["login"]}!', icon="✅")
     elif st.session_state.show_welcome_message and time.time() >= st.session_state.welcome_message_time:
         st.session_state.show_welcome_message = False
+        st.session_state.is_registration_message = False
     st.empty()
     main_game()
     
@@ -492,10 +497,11 @@ else:
         registr()
     else:
         # Показываем сообщение о регистрации если нужно
-        if st.session_state.show_welcome_message and time.time() < st.session_state.welcome_message_time:
+        if st.session_state.show_welcome_message and st.session_state.is_registration_message and time.time() < st.session_state.welcome_message_time:
             st.toast("Пользователь успешно зарегистрирован!", icon="✅")
         elif st.session_state.show_welcome_message and time.time() >= st.session_state.welcome_message_time:
             st.session_state.show_welcome_message = False
+            st.session_state.is_registration_message = False
         
         login()
 
