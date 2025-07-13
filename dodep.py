@@ -1,5 +1,8 @@
 import streamlit as st, json, time, random, os, uuid
 
+# Генерируем уникальный ID сессии для каждого пользователя
+if "session_id" not in st.session_state:
+    st.session_state.session_id = str(uuid.uuid4())
 
 
 st.set_page_config(
@@ -92,14 +95,14 @@ def generate_user_id():
     #Создает уникальный ID для пользователя
     return str(uuid.uuid4())
 
-def save_user_to_file(user_id, login, password, balance=1000.0, last_login=False):
+def save_user_to_file(user_id, login, password, balance=1000.0, session_id=None):
     """Сохраняет пользователя в отдельный файл"""
     user_data = {
         "id": user_id,
         "login": login,
         "password": password,
         "balance": balance,
-        "last_login": last_login
+        "session_id": session_id
     }
     filename = f"user_{user_id}.json"
     with open(filename, "w", encoding="utf-8") as f:
@@ -132,14 +135,14 @@ def main_game():
     # Очищаем контейнер для предотвращения смешивания с формой логина
     st.empty()
     
-    # Получаем текущего пользователя из файлов
+    # Получаем текущего пользователя из файлов по session_id
     current_user = None
     for filename in os.listdir("."):
         if filename.startswith("user_") and filename.endswith(".json"):
             try:
                 with open(filename, "r", encoding="utf-8") as f:
                     user_data = json.load(f)
-                    if user_data.get("last_login", False):
+                    if user_data.get("session_id") == st.session_state.session_id:
                         current_user = user_data
                         break
             except:
@@ -161,8 +164,8 @@ def main_game():
 
     # Кнопка выхода из аккаунта
     if st.sidebar.button("🚪 Выйти из аккаунта"):
-        current_user["last_login"] = False
-        save_user_to_file(current_user["id"], current_user["login"], current_user["password"], current_user["balance"], False)
+        current_user["session_id"] = None
+        save_user_to_file(current_user["id"], current_user["login"], current_user["password"], current_user["balance"], None)
         st.rerun()
 
     # Разделитель
@@ -221,12 +224,12 @@ def main_game():
                 current_user["balance"] += num_dep * (stavka[user_dep][0]) 
                 st.session_state.last_toast_message = f"Поздравляем! Ваш баланс: {current_user['balance']} деп коинов"
                 st.session_state.last_toast_icon = "✅"
-                save_user_to_file(current_user["id"], current_user["login"], current_user["password"], current_user["balance"], current_user["last_login"])
+                save_user_to_file(current_user["id"], current_user["login"], current_user["password"], current_user["balance"], current_user["session_id"])
             else:
                 current_user["balance"] -= num_dep
                 st.session_state.last_toast_message = f"Делай ДОДЕП ты проиграл :( Ваш баланс: {current_user['balance']} деп коинов"
                 st.session_state.last_toast_icon = "❌"
-                save_user_to_file(current_user["id"], current_user["login"], current_user["password"], current_user["balance"], current_user["last_login"])
+                save_user_to_file(current_user["id"], current_user["login"], current_user["password"], current_user["balance"], current_user["session_id"])
             
             st.session_state.show_toast_until = time.time() + 2
             st.session_state.show_spinning_animation = False
@@ -265,15 +268,14 @@ def registr():
         elif input_password != input_password_confirm:
             st.toast("Пароли отличаются!", icon="❌") 
         elif len(input_user_name) < 3 or len(input_password) < 3:
-            st.toast("Логин и пароль должны не менее 3 символов!", icon="❌")
-        
+            st.toast("Логин и пароль должны не менее 3 символов!", icon="❌")      
         else:
             existing_user = find_user_by_login(input_user_name)
             if existing_user:
                 st.toast("Такой пользователь уже существует!", icon="❌")  
             else:
                 user_id = generate_user_id()
-                save_user_to_file(user_id, input_user_name, input_password, 1000.0, False)
+                save_user_to_file(user_id, input_user_name, input_password, 1000.0, st.session_state.session_id)
                 # Устанавливаем время показа сообщения
                 st.session_state.show_register = False
                 st.session_state.show_welcome_message = True
@@ -351,9 +353,9 @@ def login():
         user = find_user_by_login(input_user_name)
 
         if user and user["password"] == input_password:
-            # Обновляем статус входа
-            user["last_login"] = True
-            save_user_to_file(user["id"], user["login"], user["password"], user["balance"], True)
+            # Обновляем статус входа с уникальным session_id
+            user["session_id"] = st.session_state.session_id
+            save_user_to_file(user["id"], user["login"], user["password"], user["balance"], st.session_state.session_id)
     
             # Устанавливаем время показа сообщения
             st.session_state.show_welcome_message = True
@@ -405,7 +407,7 @@ for filename in os.listdir("."):
         try:
             with open(filename, "r", encoding="utf-8") as f:
                 user_data = json.load(f)              
-                if user_data.get("last_login", False):
+                if user_data.get("session_id") == st.session_state.session_id:
                     active_user = user_data
                     break
         except Exception as e:
