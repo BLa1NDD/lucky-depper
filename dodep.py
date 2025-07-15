@@ -115,14 +115,17 @@ def generate_user_id():
     #Создает уникальный ID для пользователя
     return str(uuid.uuid4())
 
-def save_user_to_file(user_id, login, password, balance=1000.0, session_id=None):
+def save_user_to_file(user_id, login, password, balance=1000.0, session_id=None, history_win=None):
     """Сохраняет пользователя в отдельный файл"""
+    if history_win is None:
+        history_win = [None, None, None]
     user_data = {
         "id": user_id,
         "login": login,
         "password": password,
         "balance": balance,
-        "session_id": session_id
+        "session_id": session_id,
+        "history_win": history_win
     }
     filename = f"user_{user_id}.json"
     with open(filename, "w", encoding="utf-8") as f:
@@ -175,6 +178,52 @@ def load_user_state(user_id):
 def main_game():
     global stavka
     
+    
+    def hidtory_columns_show(show_col1, show_col2, show_col3):
+        with col1:
+            if show_col1 is not None:
+                show_col1()
+        with col2:
+            if show_col2 is not None:
+                show_col2()
+        with col3:
+            if show_col3 is not None:
+                show_col3()
+    
+
+    def show_letter_W():#показывет победу
+        st.markdown("""
+        <div style="
+            display: inline-block;
+            color: #28a745;
+            font-size: 24px;
+            font-weight: bold;
+            border: 3px solid #28a745;
+            padding: 8px 12px;
+            border-radius: 8px;
+            margin: 2px;
+        ">W</div>
+        """, unsafe_allow_html=True)
+
+    def show_letter_L():#показывет проигрыш
+        st.markdown("""
+        <div style="
+            display: inline-block;
+            color: #dc3545;
+            font-size: 24px;
+            font-weight: bold;
+            border: 3px solid #dc3545;
+            padding: 8px 12px;
+            border-radius: 8px;
+            margin: 2px;
+        ">L</div>
+        """, unsafe_allow_html=True)
+        
+    def show_none():
+        st.write("")
+
+        
+
     # Очищаем контейнер для предотвращения смешивания с формой логина
     st.empty()
     
@@ -195,7 +244,57 @@ def main_game():
         st.error("Пользователь не найден!")
         st.rerun()
     
+    def change_stat_win(state_win_or_lose):
+        nonlocal show_col2, show_col3
+        col2 = None
+        col3 = None
+        if show_col2 is not None and show_col2 != show_none:
+            if show_col2 == show_letter_W: col2 = True 
+            else: col2 = False
+        if show_col3 is not None and show_col3 != show_none:
+            if show_col3 == show_letter_W: col3 = True
+            else: col3 = False
+        
+        new_history_win = [col2, col3, state_win_or_lose]
+
+
+        save_user_to_file(current_user["id"], current_user["login"], current_user["password"], current_user["balance"], current_user["session_id"], new_history_win)
+        save_user_state(current_user["id"], True)
+
+
+    history_win = current_user["history_win"]#это ЛИСТ из 3 BOOL элементов 
+    print(current_user["history_win"])
+    if history_win[0] is not None:
+        if history_win[0]:
+            show_col1 = show_letter_W
+        else:
+            show_col1 = show_letter_L
+    else:
+        show_col1 = show_none
+    if history_win[1] is not None:
+        if history_win[1]:
+            show_col2 = show_letter_W
+        else:
+            show_col2 = show_letter_L
+    else:
+        show_col2 = show_none
+    if history_win[2] is not None:
+        if history_win[2]:
+            show_col3 = show_letter_W
+        else:
+            show_col3 = show_letter_L
+    else:
+        show_col3 = show_none
+
+    
     st.title("🎰 Lucky Depper")
+    col1, col2, col3, col4 = st.columns([0.1, 0.1, 0.1, 3.7])
+    
+    hidtory_columns_show(show_col1, show_col2, show_col3)
+    
+
+
+
 
     # Создаем сайдбар
     st.sidebar.title("🎰 Lucky Depper")
@@ -208,7 +307,7 @@ def main_game():
     # Кнопка выхода из аккаунта
     if st.sidebar.button("🚪 Выйти из аккаунта"):
         current_user["session_id"] = None
-        save_user_to_file(current_user["id"], current_user["login"], current_user["password"], current_user["balance"], None)
+        save_user_to_file(current_user["id"], current_user["login"], current_user["password"], current_user["balance"], None, current_user["history_win"])
         
         # Сохраняем состояние пользователя (выход)
         save_user_state(current_user["id"], False)
@@ -221,9 +320,9 @@ def main_game():
     # Дополнительные настройки
     st.sidebar.subheader("Статистика")
     st.sidebar.write("🎯 Вероятности выигрыша:")
-    st.sidebar.write("• 1 - 1.5x = 40%")
-    st.sidebar.write("• 5 - 2x = 20%") 
-    st.sidebar.write("• 10 - 2.5x = 10%")
+    st.sidebar.write("• 1 - 1.5x = 60%")
+    st.sidebar.write("• 5 - 2x = 30%") 
+    st.sidebar.write("• 10 - 2.5x = 15%")
     st.sidebar.write("• К - 3x = 5%")
     st.sidebar.write("• З - 5x = 1%")
 
@@ -252,7 +351,7 @@ def main_game():
         # Показываем вращающееся колесо после нажатия кнопки
         if st.session_state.show_spinning_animation:
             # Генерируем случайное время вращения от 3 до 6 секунд
-            spin_time = random.uniform(3, 6)
+            spin_time = random.uniform(2, 4)
             
             st.markdown(f"""
             <div style="text-align: center; margin-top: 10px;">
@@ -263,21 +362,20 @@ def main_game():
             
             # Имитируем обработку - используем то же случайное время
             time.sleep(spin_time)
-            
             # Выполняем логику игры
-            dep_ran = random.randint(1 + random.randint(5, 30), 95)
-            user_dep_chance = stavka[user_dep][1]
-            if dep_ran + user_dep_chance >= 100:
+            win_chance = stavka[user_dep][1]
+            if random.randint(1, 100) <= win_chance:
                 current_user["balance"] += num_dep * (stavka[user_dep][0]) 
                 st.session_state.last_toast_message = f"Поздравляем! Ваш баланс: {current_user['balance']} деп коинов"
                 st.session_state.last_toast_icon = "✅"
                 save_user_to_file(current_user["id"], current_user["login"], current_user["password"], current_user["balance"], current_user["session_id"])
+                change_stat_win(True)
             else:
                 current_user["balance"] -= num_dep
                 st.session_state.last_toast_message = f"Делай ДОДЕП ты проиграл :( Ваш баланс: {current_user['balance']} деп коинов"
                 st.session_state.last_toast_icon = "❌"
                 save_user_to_file(current_user["id"], current_user["login"], current_user["password"], current_user["balance"], current_user["session_id"])
-            
+                change_stat_win(False)
             st.session_state.show_toast_until = time.time() + 2
             st.session_state.show_spinning_animation = False
             st.rerun()
@@ -407,7 +505,7 @@ def login():
         if user and user["password"] == input_password:
             # Обновляем статус входа с уникальным session_id
             user["session_id"] = st.session_state.session_id
-            save_user_to_file(user["id"], user["login"], user["password"], user["balance"], st.session_state.session_id)
+            save_user_to_file(user["id"], user["login"], user["password"], user["balance"], st.session_state.session_id, user["history_win"])
             
             # Сохраняем состояние пользователя
             save_user_state(user["id"], True)
@@ -449,9 +547,9 @@ def login():
 
 
 stavka = {
-    "1": [1.5, 40],#лист из 1: x , 2: процент
-    "5": [2, 20],
-    "10": [2.5, 10],
+    "1": [1.5, 60],#лист из 1: x , 2: процент
+    "5": [2, 30],
+    "10": [2.5, 15],
     "К": [3, 5],
     "З": [5, 1]
 }
